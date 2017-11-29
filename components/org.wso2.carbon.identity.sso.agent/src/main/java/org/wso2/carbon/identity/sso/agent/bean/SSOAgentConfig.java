@@ -65,10 +65,15 @@ public class SSOAgentConfig {
     private static final String ARGUMENT = "sun.java.command";
 
     private Boolean isSAML2SSOLoginEnabled = false;
+    private Boolean isOIDCLoginEnabled = false;
     private Boolean isOpenIdLoginEnabled = false;
     private Boolean isOAuth2SAML2GrantEnabled = false;
+    private Boolean isDynamicAppRegistrationEnabled = false;
+    private Boolean isDynamicSAMLConfigEnabled = false;
+    private Boolean isDynamicOIDCConfigEnabled = false;
 
     private String saml2SSOURL = null;
+    private String oidcURL = null;
     private String openIdURL = null;
     private String oauth2SAML2GrantURL = null;
     private Set<String> skipURIs = new HashSet<String>();
@@ -105,8 +110,36 @@ public class SSOAgentConfig {
         return isSAML2SSOLoginEnabled;
     }
 
+    public Boolean isOIDCLoginEnabled() {
+        return isOIDCLoginEnabled;
+    }
+
     public Boolean isOpenIdLoginEnabled() {
         return isOpenIdLoginEnabled;
+    }
+    
+    public Boolean isDynamicAppRegistrationEnabled() {
+        return isDynamicAppRegistrationEnabled;
+    }
+
+    public void setDynamicAppRegistrationEnabled(Boolean isDynamicAppRegistrationEnabled) {
+        this.isDynamicAppRegistrationEnabled = isDynamicAppRegistrationEnabled;
+    }
+     
+    public Boolean isDynamicSAMLConfigEnabled() {
+        return isDynamicSAMLConfigEnabled;
+    }
+
+    public void setIsDynamicSAMLConfigEnabled(Boolean isDynamicSAMLConfigEnabled) {
+        this.isDynamicSAMLConfigEnabled = isDynamicSAMLConfigEnabled;
+    }
+    
+    public Boolean isDynamicOIDCConfigEnabled() {
+        return isDynamicOIDCConfigEnabled;
+    }
+
+    public void setIsDynamicOIDCConfigEnabled(Boolean isDynamicOIDCConfigEnabled) {
+        this.isDynamicOIDCConfigEnabled = isDynamicOIDCConfigEnabled;
     }
 
     public Boolean isOAuth2SAML2GrantEnabled() {
@@ -119,6 +152,14 @@ public class SSOAgentConfig {
 
     public void setSAML2SSOURL(String saml2SSOURL) {
         this.saml2SSOURL = saml2SSOURL;
+    }
+    
+     public String getOIDCSSOURL() {
+        return oidcURL;
+    }
+
+    public void setOIDCSSOURL(String oidcURL) {
+        this.oidcURL = oidcURL;
     }
 
     public String getOpenIdURL() {
@@ -165,12 +206,16 @@ public class SSOAgentConfig {
         return openId;
     }
 
-    public OIDC getOidc() { return oidc; }
+    public OIDC getOIDC() { return oidc; }
 
     public void setSAML2SSOLoginEnabled(Boolean isSAML2SSOLoginEnabled) {
         this.isSAML2SSOLoginEnabled = isSAML2SSOLoginEnabled;
     }
 
+    public void setOIDCLoginEnabled(Boolean isOIDCLoginEnabled) {
+        this.isOIDCLoginEnabled = isOIDCLoginEnabled;
+    }
+    
     public void setOpenIdLoginEnabled(Boolean isOpenIdLoginEnabled) {
         this.isOpenIdLoginEnabled = isOpenIdLoginEnabled;
     }
@@ -305,6 +350,7 @@ public class SSOAgentConfig {
             enableHostNameVerification =
                     Boolean.parseBoolean(properties.getProperty("SSL.EnableSSLHostNameVerification"));
         }
+        
         String isSAML2SSOLoginEnabledString = properties.getProperty(
                 SSOAgentConstants.SSOAgentConfig.ENABLE_SAML2_SSO_LOGIN);
         if (isSAML2SSOLoginEnabledString != null) {
@@ -313,6 +359,16 @@ public class SSOAgentConfig {
             LOGGER.log(Level.FINE, SSOAgentConstants.SSOAgentConfig.ENABLE_SAML2_SSO_LOGIN +
                     " not configured. Defaulting to \'false\'");
             isSAML2SSOLoginEnabled = false;
+        }
+        
+        String isOIDCSSOLoginEnabledString = properties.getProperty(
+                SSOAgentConstants.SSOAgentConfig.ENABLE_OIDC_SSO_LOGIN);
+        if (isOIDCSSOLoginEnabledString != null) {
+            isOIDCLoginEnabled = Boolean.parseBoolean(isOIDCSSOLoginEnabledString);
+        } else {
+            LOGGER.log(Level.FINE, SSOAgentConstants.SSOAgentConfig.ENABLE_OIDC_SSO_LOGIN +
+                    " not configured. Defaulting to \'false\'");
+            isOIDCLoginEnabled = false;
         }
 
         String isOpenIdLoginEnabledString = properties.getProperty(
@@ -335,7 +391,39 @@ public class SSOAgentConfig {
             isOAuth2SAML2GrantEnabled = false;
         }
 
+        String isDynamicAppRegistrationEnabledString = properties.getProperty(
+                SSOAgentConstants.SSOAgentConfig.ENABLE_DYNAMIC_APP_REGISTRATION);
+        
+        if(isDynamicAppRegistrationEnabledString != null){
+            isDynamicAppRegistrationEnabled = Boolean.parseBoolean(isDynamicAppRegistrationEnabledString);
+        } else {
+            LOGGER.log(Level.FINE, SSOAgentConstants.SSOAgentConfig.ENABLE_DYNAMIC_APP_REGISTRATION +
+                    " not configured. Defaulting to \'false\'");
+            isDynamicAppRegistrationEnabled  = false;
+        }
+        
+        String isDynamicSAMLConfigEnabledString = properties.getProperty(
+                SSOAgentConstants.SSOAgentConfig.ENABLE_DYNAMIC_SAML_CONFIGURATION);
+        if(isDynamicSAMLConfigEnabledString != null){
+            isDynamicSAMLConfigEnabled = Boolean.parseBoolean(isDynamicSAMLConfigEnabledString);
+        }else {
+            LOGGER.log(Level.FINE, SSOAgentConstants.SSOAgentConfig.ENABLE_DYNAMIC_SAML_CONFIGURATION +
+                    " not configured. Defaulting to \'false\'");
+            isDynamicSAMLConfigEnabled  = false;
+        }
+        
+        String isDynamicOIDCConfigEnabledString = properties.getProperty(
+                SSOAgentConstants.SSOAgentConfig.ENABLE_DYNAMIC_OIDC_CONFIGURATION);
+        if(isDynamicOIDCConfigEnabledString !=null){
+            isDynamicOIDCConfigEnabled = Boolean.parseBoolean(isDynamicOIDCConfigEnabledString);
+        }else {
+            LOGGER.log(Level.FINE, SSOAgentConstants.SSOAgentConfig.ENABLE_DYNAMIC_OIDC_CONFIGURATION +
+                    " not configured. Defaulting to \'false\'");
+            isDynamicOIDCConfigEnabled  = false;
+        }
+        
         saml2SSOURL = properties.getProperty(SSOAgentConstants.SSOAgentConfig.SAML2_SSO_URL);
+        oidcURL = properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC_SSO_URL);
         openIdURL = properties.getProperty(SSOAgentConstants.SSOAgentConfig.OPENID_URL);
         oauth2SAML2GrantURL = properties.getProperty(
                 SSOAgentConstants.SSOAgentConfig.OAUTH2_SAML2_GRANT_URL);
@@ -471,7 +559,7 @@ public class SSOAgentConfig {
         saml2.relayState = properties.getProperty(SSOAgentConstants.SSOAgentConfig.SAML2.RELAY_STATE);
         saml2.postBindingRequestHTMLPayload = properties.getProperty(
                 SSOAgentConstants.SSOAgentConfig.SAML2.POST_BINDING_REQUEST_HTML_PAYLOAD);
-
+        
         oauth2.tokenURL = properties.getProperty(
                 SSOAgentConstants.SSOAgentConfig.OAuth2.TOKEN_URL);
         oauth2.clientId = properties.getProperty(SSOAgentConstants.SSOAgentConfig.OAuth2.CLIENT_ID);
@@ -501,12 +589,27 @@ public class SSOAgentConfig {
             openId.isDumbModeEnabled = false;
         }
 
-        oidc.setConsumerKey(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.CONSUMER_KEY));
-        oidc.setConsumerSecret(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.CONSUMER_SECRET));
+        //configurations for OIDC specific properties begins here....
+        oidc.setSpName(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.SERVICE_PROVIDER_NAME));
+        oidc.setClientId(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.CLIENT_ID));
+        oidc.setClientSecret(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.CLIENT_SECRET));
         oidc.setAuthzEndpoint(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.OAUTH2_AUTHZ_ENDPOINT));
+        oidc.setTokenEndpoint(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.OAUTH2_TOKEN_ENDPOINT));
+        oidc.setUserInfoEndpoint(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.OAUTH2_USER_INFO_ENDPOINT));
         oidc.setAuthzGrantType(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.OAUTH2_GRANT_TYPE));
         oidc.setCallBackUrl(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.CALL_BACK_URL));
         oidc.setOIDCLogoutEndpoint(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.OIDC_LOGOUT_ENDPOINT));
+        
+        String enableIDTokenValidationString = properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.ENABLE_ID_TOKEN_VALIDATION);
+        if(StringUtils.isNotBlank(enableIDTokenValidationString)){
+            oidc.setIsIDTokenValidationEnabled(Boolean.parseBoolean(
+                properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.ENABLE_ID_TOKEN_VALIDATION)));
+        }else{
+            LOGGER.log(Level.FINE, "\'" + SSOAgentConstants.SSOAgentConfig.OIDC.ENABLE_ID_TOKEN_VALIDATION +
+                    "\' not configured. Defaulting to \'false\'");
+            oidc.setIsIDTokenValidationEnabled(false);
+        }
+        
         oidc.setSessionIFrameEndpoint(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC
                 .OIDC_SESSION_IFRAME_ENDPOINT));
         oidc.setScope(properties.getProperty(SSOAgentConstants.SSOAgentConfig.OIDC.SCOPE));
@@ -968,31 +1071,42 @@ public class SSOAgentConfig {
 
     public class OIDC {
 
-        private String consumerKey = StringUtils.EMPTY;
-        private String consumerSecret = StringUtils.EMPTY;
+        private String spName = StringUtils.EMPTY;
+        private String clientId = StringUtils.EMPTY;
+        private String clientSecret = StringUtils.EMPTY;
         private String authzEndpoint = StringUtils.EMPTY;
+        private String tokenEndpoint = StringUtils.EMPTY;
+        private String userInfoEndpoint = StringUtils.EMPTY;
         private String authzGrantType = StringUtils.EMPTY;
         private String callBackUrl = StringUtils.EMPTY;
         private String OIDCLogoutEndpoint = StringUtils.EMPTY;
         private String sessionIFrameEndpoint = StringUtils.EMPTY;
-
-        public String getScope() {
-            return scope;
-        }
-
-        public void setScope(String scope) {
-            this.scope = scope;
-        }
-
         private String scope = StringUtils.EMPTY;
         private String postLogoutRedirectUri = StringUtils.EMPTY;
-
-        public String getConsumerKey() {
-            return consumerKey;
+        private Boolean isIDTokenValidationEnabled = false;
+       
+        public String getSpName() {
+            return spName;
         }
 
-        public void setConsumerKey(String consumerKey) {
-            this.consumerKey = consumerKey;
+        public void setSpName(String spName) {
+            this.spName = spName;
+        }
+        
+        public Boolean getIsIDTokenValidationEnabled() {
+            return isIDTokenValidationEnabled;
+        }
+
+        public void setIsIDTokenValidationEnabled(Boolean isIDTokenValidationEnabled) {
+            this.isIDTokenValidationEnabled = isIDTokenValidationEnabled;
+        }
+
+        public String getClientId() {
+            return clientId;
+        }
+
+        public void setClientId(String clientId) {
+            this.clientId = clientId;
         }
 
         public String getAuthzEndpoint() {
@@ -1002,6 +1116,15 @@ public class SSOAgentConfig {
         public void setAuthzEndpoint(String authzEndpoint) {
             this.authzEndpoint = authzEndpoint;
         }
+            
+        public String getUserInfoEndpoint() {
+            return userInfoEndpoint;
+        }
+
+        public void setUserInfoEndpoint(String userInfoEndpoint) {
+            this.userInfoEndpoint = userInfoEndpoint;
+        }
+        
         public String getAuthzGrantType() {
             return authzGrantType;
         }
@@ -1016,6 +1139,14 @@ public class SSOAgentConfig {
 
         public void setCallBackUrl(String callBackUrl) {
             this.callBackUrl = callBackUrl;
+        }
+             
+        public String getScope() {
+            return scope;
+        }
+
+        public void setScope(String scope) {
+            this.scope = scope;
         }
 
         public String getOIDCLogoutEndpoint() {
@@ -1034,12 +1165,20 @@ public class SSOAgentConfig {
             this.sessionIFrameEndpoint = sessionIFrameEndpoint;
         }
 
-        public String getConsumerSecret() {
-            return consumerSecret;
+        public String getClientSecret() {
+            return clientSecret;
         }
 
-        public void setConsumerSecret(String consumerSecret) {
-            this.consumerSecret = consumerSecret;
+        public void setClientSecret(String clientSecret) {
+            this.clientSecret = clientSecret;
+        }
+           
+        public String getTokenEndpoint() {
+            return tokenEndpoint;
+        }
+
+        public void setTokenEndpoint(String tokenEndpoint) {
+            this.tokenEndpoint = tokenEndpoint;
         }
 
         public String getPostLogoutRedirectUri() {

@@ -33,14 +33,25 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 import java.util.Map;
+import org.json.JSONObject;
 
 public class LoggedInSessionBean implements Serializable {
 
     private static final long serialVersionUID = 7762835859870143767L;
 
     private OpenID openId;
-
+    
+    private OIDC oidc;
+    
     private SAML2SSO saml2SSO;
+    
+    public OIDC getOIDC() {
+        return oidc;
+    }
+
+    public void setOIDC(OIDC oidc) {
+        this.oidc = oidc;
+    }
 
     public SAML2SSO getSAML2SSO() {
         return saml2SSO;
@@ -153,6 +164,74 @@ public class LoggedInSessionBean implements Serializable {
         }
     }
 
+    public class OIDC implements Serializable {
+
+        private String callbackUrl;
+        private String accessToken;
+        private String refreshToken;
+        private String idToken;
+        private String code;
+        private String sessionState;
+        private JSONObject userDetails;
+
+        public String getCallbackUrl() {
+            return callbackUrl;
+        }
+
+        public void setCallbackUrl(String callbackUrl) {
+            this.callbackUrl = callbackUrl;
+        }
+
+        public String getAccessToken() {
+            return accessToken;
+        }
+
+        public void setAccessToken(String accessToken) {
+            this.accessToken = accessToken;
+        }
+
+        public String getRefreshToken() {
+            return refreshToken;
+        }
+
+        public void setRefreshToken(String refreshToken) {
+            this.refreshToken = refreshToken;
+        }
+        
+        public String getIdToken() {
+            return idToken;
+        }
+
+        public void setIdToken(String idToken) {
+            this.idToken = idToken;
+        }
+
+        public String getCode() {
+            return code;
+        }
+
+        public void setCode(String code) {
+            this.code = code;
+        }
+
+        public String getSessionState() {
+            return sessionState;
+        }
+
+        public void setSessionState(String sessionState) {
+            this.sessionState = sessionState;
+        }
+        
+        public JSONObject getUserDetails() {
+            return userDetails;
+        }
+
+        public void setUserDetails(JSONObject userDetails) {
+            this.userDetails = userDetails;
+        }
+            
+    }
+    
     public class SAML2SSO implements Serializable{
 
         public static final String EMPTY_STRING = "";
@@ -171,6 +250,8 @@ public class LoggedInSessionBean implements Serializable {
         private String sessionIndex;
 
         private Map<String, String> subjectAttributes;
+        
+        private String sloURL;
 
         private void writeObject(java.io.ObjectOutputStream stream)
                 throws IOException {
@@ -231,6 +312,14 @@ public class LoggedInSessionBean implements Serializable {
             this.subjectAttributes = samlSSOAttributes;
         }
 
+        public String getSloURL() {
+            return sloURL;
+        }
+
+        public void setSloURL(String sloURL) {
+            this.sloURL = sloURL;
+        }
+        
         public String getSessionIndex() {
             return sessionIndex;
         }

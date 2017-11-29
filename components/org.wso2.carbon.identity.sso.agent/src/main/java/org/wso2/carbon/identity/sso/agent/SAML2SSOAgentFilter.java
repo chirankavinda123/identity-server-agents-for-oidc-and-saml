@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -14,10 +14,7 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
- *
  */
-
 package org.wso2.carbon.identity.sso.agent;
 
 import org.wso2.carbon.identity.sso.agent.bean.SSOAgentConfig;
@@ -36,11 +33,14 @@ import java.util.logging.Logger;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
+import javax.servlet.RequestDispatcher;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+
+import org.wso2.carbon.identity.sso.agent.bean.AppRegistrationAndConfigBean;
 
 /**
  * Servlet Filter implementation class SAML2SSOAgentFilter.
@@ -71,8 +71,8 @@ public class SAML2SSOAgentFilter implements Filter {
         try {
             SSOAgentConfig ssoAgentConfig = SSOAgentFilterUtils.getSSOAgentConfig(filterConfig);
 
-            SSOAgentRequestResolver resolver =
-                    new SSOAgentRequestResolver(request, response, ssoAgentConfig);
+            SSOAgentRequestResolver resolver
+                    = new SSOAgentRequestResolver(request, response, ssoAgentConfig);
 
             if (resolver.isURLToSkip()) {
                 chain.doFilter(servletRequest, servletResponse);
@@ -92,11 +92,11 @@ public class SAML2SSOAgentFilter implements Filter {
 
                 samlSSOManager = new SAML2SSOManager(ssoAgentConfig);
                 try {
-                    samlSSOManager.processResponse(request, response);
+                    samlSSOManager.processResponse(request, response, filterConfig);
+
                 } catch (SSOAgentException e) {
                     handleException(request, e);
                 }
-
             } else if (resolver.isSLOURL()) {
 
                 samlSSOManager = new SAML2SSOManager(ssoAgentConfig);
@@ -119,6 +119,47 @@ public class SAML2SSOAgentFilter implements Filter {
             } else if (resolver.isSAML2SSOURL()) {
 
                 samlSSOManager = new SAML2SSOManager(ssoAgentConfig);
+                AppRegistrationAndConfigBean regAndConfBean = new AppRegistrationAndConfigBean();
+                String spName = ssoAgentConfig.getSAML2().getSPEntityId();
+                RequestDispatcher requestDispatcher = null;
+
+                //check if the application is registerd in the IDP
+                if (!regAndConfBean.checkAppRegistrationStatus(spName)) {
+                    LOGGER.log(Level.INFO, "Application has not been Registered Yet!");
+                    if (ssoAgentConfig.isDynamicAppRegistrationEnabled()) {
+                        // do dynamic registration
+                        regAndConfBean.performDynamicAppRegistration(spName);
+                    } else {
+                        request.setAttribute("message", "Your Application is not yet registed with IDP. "
+                                + "Either register in IDP or enable dynamic Registraion from properties file!");
+                        requestDispatcher = request.getRequestDispatcher("index.jsp");
+                        requestDispatcher.forward(request, response);
+                        return;
+                    }
+                }
+
+                //check whether the app is configured to use SAML
+                if (!regAndConfBean.checkSAMLconfigurationStatus(spName)) {
+                    if (ssoAgentConfig.isDynamicSAMLConfigEnabled()) {
+                        // perform dynamic saml configuration
+                        String status = regAndConfBean.performDynamicSAMLConfiguration(ssoAgentConfig);
+                        if (!"updated".equals(status)) {
+                            request.setAttribute("message", status);
+                            requestDispatcher = request.getRequestDispatcher("index.jsp");
+                            requestDispatcher.forward(request, response);
+                            return;
+                        }
+                    } else {
+                        request.setAttribute("message", "Your Application has not yet configured to use SAML. "
+                                + "Either configure using management console or enable dynamic saml configuration from"
+                                + " properties file!");
+                        requestDispatcher = request.getRequestDispatcher("index.jsp");
+                        requestDispatcher.forward(request, response);
+                        return;
+                    }
+
+                }
+
                 if (resolver.isHttpPostBinding()) {
                     String htmlPayload = samlSSOManager.buildPostRequest(request, response, false);
                     SSOAgentUtils.sendPostResponse(request, response, htmlPayload);
@@ -157,7 +198,6 @@ public class SAML2SSOAgentFilter implements Filter {
             response.sendRedirect(filterConfig.getServletContext().getContextPath());
         }
     }
-
 
     /**
      * @see Filter#destroy()

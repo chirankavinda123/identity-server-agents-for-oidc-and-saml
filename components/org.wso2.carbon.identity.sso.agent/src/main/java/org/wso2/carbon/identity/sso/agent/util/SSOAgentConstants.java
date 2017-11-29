@@ -58,9 +58,14 @@ public class SSOAgentConstants {
     public static class SSOAgentConfig {
 
         public static final String ENABLE_SAML2_SSO_LOGIN = "EnableSAML2SSOLogin";
+        public static final String ENABLE_OIDC_SSO_LOGIN = "EnableOIDCSSOLogin";
         public static final String ENABLE_OPENID_SSO_LOGIN = "EnableOpenIDLogin";
         public static final String ENABLE_OAUTH2_SAML2_OAUTH2_GRANT = "EnableOAuth2SAML2Grant";
+        public static final String ENABLE_DYNAMIC_APP_REGISTRATION = "EnableDynamicAppRegistration";
+        public static final String ENABLE_DYNAMIC_SAML_CONFIGURATION = "EnableDynamicSAMLConfiguration";
+        public static final String ENABLE_DYNAMIC_OIDC_CONFIGURATION = "EnableDynamicOIDCConfiguration";
         public static final String SAML2_SSO_URL = "SAML2SSOURL";
+        public static final String OIDC_SSO_URL = "OIDCSSOURL";
         public static final String OPENID_URL = "OpenIdURL";
         public static final String OAUTH2_SAML2_GRANT_URL = "OAuth2SAML2GrantURL";
         public static final String SKIP_URIS = "SkipURIs";
@@ -113,15 +118,19 @@ public class SSOAgentConstants {
 
         public static class OIDC {
 
-            public static final String CONSUMER_KEY = "consumerKey";
-            public static final String CONSUMER_SECRET = "consumerSecret";
-            public static final String CALL_BACK_URL = "callBackUrl";
-            public static final String OAUTH2_GRANT_TYPE = "grantType";
-            public static final String OAUTH2_AUTHZ_ENDPOINT = "authorizeEndpoint";
-            public static final String OIDC_LOGOUT_ENDPOINT = "logoutEndpoint";
-            public static final String OIDC_SESSION_IFRAME_ENDPOINT = "sessionIFrameEndpoint";
-            public static final String SCOPE = "scope";
-            public static final String POST_LOGOUT_REDIRECT_RUI = "postLogoutRedirectUri";
+            public static final String CLIENT_ID = "OIDC.ClientId";
+            public static final String CLIENT_SECRET = "OIDC.ClientSecret";
+            public static final String CALL_BACK_URL = "OIDC.CallBackUrl";
+            public static final String SERVICE_PROVIDER_NAME = "OIDC.spName";
+            public static final String OAUTH2_GRANT_TYPE = "OIDC.GrantType";
+            public static final String OAUTH2_AUTHZ_ENDPOINT = "OIDC.AuthorizeEndpoint";
+            public static final String OAUTH2_TOKEN_ENDPOINT = "OIDC.TokenEndpoint";
+            public static final String OAUTH2_USER_INFO_ENDPOINT = "OIDC.UserInfoEndpoint";
+            public static final String OIDC_LOGOUT_ENDPOINT = "OIDC.LogoutEndpoint";
+            public static final String OIDC_SESSION_IFRAME_ENDPOINT = "OIDC.SessionIFrameEndpoint";
+            public static final String SCOPE = "OIDC.Scope";
+            public static final String POST_LOGOUT_REDIRECT_RUI = "OIDC.PostLogoutRedirectUri";
+            public static final String ENABLE_ID_TOKEN_VALIDATION = "OIDC.EnableIDTokenValidation";
 
             private OIDC() {}
         }

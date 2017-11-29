@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
+ * Copyright (c) 2017, WSO2 Inc. (http://www.wso2.org) All Rights Reserved.
  *
  * WSO2 Inc. licenses this file to you under the Apache License,
  * Version 2.0 (the "License"); you may not use this file except
@@ -14,8 +14,6 @@
  * KIND, either express or implied.  See the License for the
  * specific language governing permissions and limitations
  * under the License.
- *
- *
  */
 
 package org.wso2.carbon.identity.sso.agent.saml;
@@ -98,8 +96,13 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
+import java.rmi.RemoteException;
+import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
 import java.util.ArrayList;
@@ -109,6 +112,11 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.Deflater;
 import java.util.zip.DeflaterOutputStream;
+import javax.servlet.FilterConfig;
+import javax.servlet.RequestDispatcher;
+import javax.servlet.ServletException;
+import org.apache.catalina.authenticator.BasicAuthenticator;
+import org.apache.catalina.connector.Request;
 
 import static org.wso2.carbon.CarbonConstants.AUDIT_LOG;
 
@@ -120,13 +128,11 @@ public class SAML2SSOManager {
 
     private static final Log log = LogFactory.getLog(SAML2SSOManager.class);
 
-
     private static final Logger LOGGER = Logger.getLogger(SSOAgentConstants.LOGGER_NAME);
     private SSOAgentConfig ssoAgentConfig = null;
 
     public SAML2SSOManager(SSOAgentConfig ssoAgentConfig) throws SSOAgentException {
-
-		/* Initializing the OpenSAML library, loading default configurations */
+	/* Initializing the OpenSAML library, loading default configurations */
         this.ssoAgentConfig = ssoAgentConfig;
         //load custom Signature Validator Class
         String signerClassName = ssoAgentConfig.getSAML2().getSignatureValidatorImplClass();
@@ -135,7 +141,7 @@ public class SAML2SSOManager {
                 SSOAgentDataHolder.getInstance().setSignatureValidator(Class.forName(signerClassName).newInstance());
             }
         } catch (ClassNotFoundException e) {
-            throw new SSOAgentException("Error loading custom signature validator class", e);
+            throw new SSOAgentException("class not found", e);
         } catch (IllegalAccessException e) {
             throw new SSOAgentException("Error loading custom signature validator class", e);
         } catch (InstantiationException e) {
@@ -209,8 +215,6 @@ public class SAML2SSOManager {
             }
             httpQueryString.append(builder);
         }
-
-
 
         if (ssoAgentConfig.getSAML2().getIdPURL().indexOf("?") > -1) {
             idpUrl = ssoAgentConfig.getSAML2().getIdPURL().concat("&").concat(httpQueryString.toString());
@@ -313,11 +317,12 @@ public class SAML2SSOManager {
 
     }
 
-    public void processResponse(HttpServletRequest request, HttpServletResponse response)
-            throws SSOAgentException {
+    public void processResponse(HttpServletRequest request, HttpServletResponse response,FilterConfig filterConfig)
+            throws SSOAgentException, ServletException, IOException {
 
         String saml2SSOResponse = request.getParameter(SSOAgentConstants.SAML2SSO.HTTP_POST_PARAM_SAML2_RESP);
-
+        LoggedInSessionBean lsb;
+        
         if (saml2SSOResponse != null) {
             String decodedResponse = new String(Base64.decode(saml2SSOResponse), Charset.forName("UTF-8"));
             XMLObject samlObject = SSOAgentUtils.unmarshall(decodedResponse);
@@ -327,6 +332,49 @@ public class SAML2SSOManager {
                 request.setAttribute(SSOAgentConstants.SHOULD_GO_TO_WELCOME_PAGE, "true");
             } else {
                 processSSOResponse(request);
+                
+                // setting principal
+                lsb = (LoggedInSessionBean) request.getSession().
+                                    getAttribute(SSOAgentConstants.SESSION_BEAN_NAME);
+                final String subjectId = lsb.getSAML2SSO().getSubjectId();
+                
+                 Principal principal = new Principal() {
+                        @Override
+                        public String getName() {
+                            
+                            return subjectId;
+                        }
+                    };
+
+                BasicAuthenticator basicAuthenticator = new BasicAuthenticator();
+                Field field=null;
+                try {
+                    field = request.getClass().getDeclaredField("request");
+                } catch (NoSuchFieldException ex) {
+                    Logger.getLogger(SAML2SSOManager.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (SecurityException ex) {
+                    Logger.getLogger(SAML2SSOManager.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                
+                field.setAccessible(true); // getting access to (protected) field
+                Request realRequest = null;
+                try {
+                    realRequest = (Request) field.get(request);
+                } catch (IllegalArgumentException ex) {
+                    Logger.getLogger(SAML2SSOManager.class.getName()).log(Level.SEVERE, null, ex);
+                } catch (IllegalAccessException ex) {
+                    Logger.getLogger(SAML2SSOManager.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                basicAuthenticator.register(realRequest, response, principal, "BASIC", "USER_NAME",
+                        "PASSWORD");
+                
+                //end of setting principal
+                
+                request.getSession(false).setAttribute("logoutUrl",request.getContextPath() + "/" +
+                        lsb.getSAML2SSO().getSloURL());
+                RequestDispatcher dispatcher=filterConfig.getServletContext().
+                        getRequestDispatcher( "/WEB-INF/home.jsp" );
+                dispatcher.forward( request, response );
             }
             String relayState = request.getParameter(RelayState.DEFAULT_ELEMENT_LOCAL_NAME);
 
@@ -412,7 +460,8 @@ public class SAML2SSOManager {
         }
 
         // Checking for multiple Assertions
-        NodeList assertionList = response.getDOM().getElementsByTagNameNS(SAMLConstants.SAML20_NS, "Assertion");
+        NodeList assertionList = response.getDOM().getElementsByTagNameNS(SAMLConstants.SAML20_NS,
+                "Assertion");
         if (assertionList.getLength() > 1) {
             log.error("Invalid schema for the SAML2 response. Multiple Assertion elements found.");
             throw new SSOAgentException("Error occurred while processing SAML2 response.");
@@ -479,7 +528,10 @@ public class SAML2SSOManager {
         if (subject == null) {
             throw new SSOAgentException("SAML2 Response does not contain the name of the subject");
         }
-
+        
+        if (assertion.getAttributeStatements() != null) {
+            servletRequest.getSession().setAttribute("claimsMap",getClaimsMap(assertion));
+        }
         // This should be the only time where a new session can be created.
         // Thus in latter places servletRequest.getSession(false) should be used.
         sessionBean.getSAML2SSO().setSubjectId(subject); // set the subject
@@ -503,8 +555,29 @@ public class SAML2SSOManager {
             SSOAgentSessionManager.addAuthenticatedSession(servletRequest.getSession(false));
         }
 
+        sessionBean.getSAML2SSO().setSloURL(ssoAgentConfig.getSAML2().getSLOURL());
         servletRequest.getSession(false).setAttribute(SSOAgentConstants.SESSION_BEAN_NAME, sessionBean);
+        
+    }
+    
+    private Map<String, String> getClaimsMap(Assertion assertion) {
 
+        Map<String, String> claims = new HashMap<String, String>();
+
+            List<AttributeStatement> attributeStatements = assertion.getAttributeStatements();
+
+
+            for (AttributeStatement attributeStatement : attributeStatements) {
+                List<Attribute> attributes = attributeStatement.getAttributes();
+                for (Attribute attribute : attributes) {
+                    Element value = attribute.getAttributeValues().get(0).getDOM();
+                    String attributeValue = value.getTextContent();
+                    claims.put(attribute.getName(), attributeValue);
+                }
+            }
+
+        
+        return claims;
     }
 
     protected LogoutRequest buildLogoutRequest(String user, String sessionIdx) throws SSOAgentException {
@@ -556,8 +629,7 @@ public class SAML2SSOManager {
         AuthnContextClassRefBuilder authnContextClassRefBuilder = new AuthnContextClassRefBuilder();
         AuthnContextClassRef authnContextClassRef =
                 authnContextClassRefBuilder.buildObject("urn:oasis:names:tc:SAML:2.0:assertion",
-                        "AuthnContextClassRef",
-                        "saml");
+                        "AuthnContextClassRef","saml");
         authnContextClassRef.setAuthnContextClassRef("urn:oasis:names:tc:SAML:2.0:ac:classes:PasswordProtectedTransport");
 
 		/* AuthnContex */
@@ -638,7 +710,6 @@ public class SAML2SSOManager {
         }
     }
 
-
     /*
      * Process the response and returns the results
      */
@@ -649,7 +720,6 @@ public class SAML2SSOManager {
         if (assertion != null && assertion.getAttributeStatements() != null) {
 
             List<AttributeStatement> attributeStatementList = assertion.getAttributeStatements();
-
 
             for (AttributeStatement statement : attributeStatementList) {
                 List<Attribute> attributesList = statement.getAttributes();
@@ -662,7 +732,6 @@ public class SAML2SSOManager {
                     results.put(attribute.getName(), value);
                 }
             }
-
         }
         return results;
     }
@@ -751,8 +820,7 @@ public class SAML2SSOManager {
         try {
             System.setProperty("javax.xml.parsers.DocumentBuilderFactory",
                     "org.apache.xerces.jaxp.DocumentBuilderFactoryImpl");
-            MarshallerFactory marshallerFactory =
-                    org.opensaml.xml.Configuration.getMarshallerFactory();
+            MarshallerFactory marshallerFactory = org.opensaml.xml.Configuration.getMarshallerFactory();
             Marshaller marshaller = marshallerFactory.getMarshaller(xmlObject);
             Element element = marshaller.marshall(xmlObject);
             ByteArrayOutputStream byteArrayOutputStrm = new ByteArrayOutputStream();

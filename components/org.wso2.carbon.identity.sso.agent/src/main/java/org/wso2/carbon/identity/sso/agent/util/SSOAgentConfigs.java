@@ -43,6 +43,7 @@ public class SSOAgentConfigs {
 
     private static Boolean samlSSOLoginEnabled;
     private static Boolean openidLoginEnabled;
+    private static Boolean openIDConnectLoginEnabled;
     private static Boolean saml2GrantEnabled;
     private static String sessionBeanName;
     private static String loginUrl;
@@ -135,6 +136,13 @@ public class SSOAgentConfigs {
             samlSSOLoginEnabled = true;
         }
 
+        if (properties.getProperty("EnableOIDCSSOLogin") != null) {
+            openIDConnectLoginEnabled = Boolean.parseBoolean(properties.getProperty("EnableOIDCSSOLogin"));
+        } else {
+            LOGGER.info("\'EnableOIDCSSOLogin\' not configured. Defaulting to \'true\'");
+            openIDConnectLoginEnabled = true;
+        }
+        
         if (properties.getProperty("EnableOpenIDLogin") != null) {
             openidLoginEnabled = Boolean.parseBoolean(properties.getProperty("EnableOpenIDLogin"));
         } else {
@@ -236,6 +244,8 @@ public class SSOAgentConfigs {
         requestQueryParameters = properties.getProperty("SAML.Request.Query.Param");
 
         addExtension = properties.getProperty("SAML.Request.Add.Extension");
+        
+        //oidc props setup
 
     }
 
